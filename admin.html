@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>咨询表单管理后台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #4a69bd;
+            color: white;
+            padding: 15px 0;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .search-bar input {
+            padding: 10px;
+            width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .details-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .details-btn:hover {
+            background-color: #2980b9;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .detail-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 100px;
+        }
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+        }
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+            .search-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .search-bar input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>咨询表单管理后台</h1>
+        </div>
+    </header>
+    <div class="container">
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="搜索记录...">
+            <button id="refreshBtn" class="details-btn">刷新</button>
+        </div>
+        <table id="consultationsTable">
+            <thead>
+                <tr>
+                    <th>提交时间</th>
+                    <th>姓名</th>
+                    <th>邮箱</th>
+                    <th>电话</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="consultationsBody">
+                <tr class="no-data">
+                    <td colspan="5">加载中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>咨询详情</h2>
+            <div id="detailsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const consultationsBody = document.getElementById('consultationsBody');
+            const searchInput = document.getElementById('searchInput');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const detailsModal = document.getElementById('detailsModal');
+            const detailsContent = document.getElementById('detailsContent');
+            const closeBtn = document.querySelector('.close-btn');
+
+            // 加载咨询记录
+            function loadConsultations() {
+                fetch('/api/consultations')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.consultations.length > 0) {
+                            displayConsultations(data.consultations);
+                        } else {
+                            consultationsBody.innerHTML = '<tr class="no-data"><td colspan="5">暂无咨询记录</td></tr>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('加载咨询记录失败:', error);
+                        consultationsBody.innerHTML = '<tr class="no-data"><td colspan="5">加载失败，请稍后重试</td></tr>';
+                    });
+            }
+
+            // 显示咨询记录
+            function displayConsultations(consultations) {
+                // 按提交时间倒序排序
+                consultations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                consultationsBody.innerHTML = '';
+                consultations.forEach(consultation => {
+                    const row = document.createElement('tr');
+                    const date = new Date(consultation.timestamp).toLocaleString();
+
+                    row.innerHTML = `
+                        <td>${date}</td>
+                        <td>${consultation.name || '-'}</td>
+                        <td>${consultation.email || '-'}</td>
+                        <td>${consultation.phone || '-'}</td>
+                        <td><button class="details-btn" data-id="${consultation.id}">查看详情</button></td>
+                    `;
+
+                    consultationsBody.appendChild(row);
+                });
+
+                // 添加查看详情事件
+                document.querySelectorAll('.details-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        showDetails(id);
+                    });
+                });
+            }
+
+            // 显示详情
+            function showDetails(id) {
+                fetch('/api/consultations')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const consultation = data.consultations.find(item => item.id === id);
+                            if (consultation) {
+                                detailsContent.innerHTML = `
+                                    <div class="detail-item">
+                                        <span class="detail-label">提交时间:</span>
+                                        <span>${new Date(consultation.timestamp).toLocaleString()}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">姓名:</span>
+                                        <span>${consultation.name || '-'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">邮箱:</span>
+                                        <span>${consultation.email || '-'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">电话:</span>
+                                        <span>${consultation.phone || '-'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">咨询类型:</span>
+                                        <span>${consultation.consultationType || '-'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">学员年龄段:</span>
+                                        <span>${consultation.ageGroup || '-'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">具体需求:</span>
+                                        <span>${consultation.requirements || '-'}</span>
+                                    </div>
+                                `;
+                                detailsModal.style.display = 'flex';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('加载详情失败:', error);
+                    });
+            }
+
+            // 搜索功能
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                fetch('/api/consultations')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const filtered = data.consultations.filter(consultation => {
+                                return (
+                                    consultation.name.toLowerCase().includes(searchTerm) ||
+                                    consultation.email.toLowerCase().includes(searchTerm) ||
+                                    consultation.phone.includes(searchTerm) ||
+                                    consultation.consultationType.toLowerCase().includes(searchTerm) ||
+                                    consultation.ageGroup.toLowerCase().includes(searchTerm) ||
+                                    consultation.requirements.toLowerCase().includes(searchTerm)
+                                );
+                            });
+
+                            if (filtered.length > 0) {
+                                displayConsultations(filtered);
+                            } else {
+                                consultationsBody.innerHTML = '<tr class="no-data"><td colspan="5">没有找到匹配的记录</td></tr>';
+                            }
+                        }
+                    });
+            });
+
+            // 刷新按钮
+            refreshBtn.addEventListener('click', loadConsultations);
+
+            // 关闭模态框
+            closeBtn.addEventListener('click', function() {
+                detailsModal.style.display = 'none';
+            });
+
+            // 点击模态框外部关闭
+            window.addEventListener('click', function(event) {
+                if (event.target === detailsModal) {
+                    detailsModal.style.display = 'none';
+                }
+            });
+
+            // 初始加载
+            loadConsultations();
+        });
+    </script>
+</body>
+</html>

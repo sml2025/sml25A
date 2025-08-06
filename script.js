@@ -9,13 +9,15 @@ document.addEventListener('DOMContentLoaded', function() {
         navToggle.classList.toggle('active');
     });
 
-    // 滚动时导航栏样式变化
+    // 滚动时导航栏样式变化 - 保持毛玻璃效果
     window.addEventListener('scroll', function() {
         if (window.scrollY > 100) {
-            navbar.style.background = 'rgba(255, 255, 255, 0.98)';
+            navbar.style.background = 'rgba(255, 255, 255, 0.8)';
+            navbar.style.backdropFilter = 'blur(10px)';
             navbar.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
         } else {
-            navbar.style.background = 'rgba(255, 255, 255, 0.95)';
+            navbar.style.background = 'rgba(255, 255, 255, 0.1)';
+            navbar.style.backdropFilter = 'blur(10px)';
             navbar.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
         }
     });
@@ -95,6 +97,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(this);
             const data = Object.fromEntries(formData);
             
+            console.log('表单提交数据:', data);
+            
+            // 检查数据是否为空
+            if (!data || Object.keys(data).length === 0) {
+                console.error('表单数据为空');
+                showNotification('表单数据不能为空', 'error');
+                return;
+            }
+            
             // 简单验证
             let isValid = true;
             const requiredFields = this.querySelectorAll('[required]');
@@ -108,9 +119,36 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (isValid) {
-                // 显示提交成功消息
-                showNotification('咨询表单已提交，我们会尽快与您联系！', 'success');
-                this.reset();
+                // 发送表单数据到API
+                console.log('开始发送表单数据到API...');
+                 fetch('/api/consultation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    console.log('API响应状态:', response.status);
+                    return response.json();
+                })
+                .then(result => {
+                    console.log('API响应结果:', result);
+                    if (result.success) {
+                        showNotification(result.message || '咨询表单已提交，我们会尽快与您联系！', 'success');
+                        this.reset();
+                        // 提交成功后刷新后台管理页面（如果打开）
+                        if (window.opener && window.opener.location.pathname === '/admin') {
+                            window.opener.location.reload();
+                        }
+                    } else {
+                        showNotification(result.message || '提交失败，请稍后再试', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('提交表单错误:', error);
+                    showNotification('提交失败，请稍后再试', 'error');
+                });
             } else {
                 showNotification('请填写所有必填字段', 'error');
             }
@@ -464,11 +502,24 @@ document.addEventListener('DOMContentLoaded', function() {
         type();
     }
 
-    // 为标题添加打字机效果
+    // 为标题添加打字机效果（保留HTML结构）
     const heroTitle = document.querySelector('.hero-title');
     if (heroTitle) {
-        const originalText = heroTitle.textContent;
-        typeWriter(heroTitle, originalText, 150);
+        // 获取原始HTML结构
+        const originalHTML = heroTitle.innerHTML;
+        // 保存div元素
+        const titleDivs = heroTitle.querySelectorAll('.title-line');
+        
+        // 为每个div添加打字机效果
+        titleDivs.forEach((div, index) => {
+            const text = div.textContent;
+            div.textContent = '';
+            
+            // 延迟启动每个div的打字效果
+            setTimeout(() => {
+                typeWriter(div, text, 150);
+            }, index * 1500); // 每个div延迟1.5秒
+        });
     }
 
     // 添加粒子效果
@@ -971,4 +1022,4 @@ if ('serviceWorker' in navigator) {
                 console.log('SW registration failed: ', registrationError);
             });
     });
-} 
+}

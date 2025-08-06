@@ -1,0 +1,44 @@
+{
+  "consultations": [
+    {
+      "id": "1754331960348",
+      "timestamp": "2025-08-04T18:26:00.348Z",
+      "name": "测试用户",
+      "email": "test@example.com",
+      "phone": "13800138000",
+      "consultationType": "课程咨询",
+      "ageGroup": "6-12岁",
+      "requirements": "测试表单提交"
+    },
+    {
+      "id": "1754332039893",
+      "timestamp": "2025-08-04T18:27:19.893Z",
+      "name": "测试用户",
+      "email": "test@example.com",
+      "phone": "13800138000",
+      "consultationType": "课程咨询",
+      "ageGroup": "6-12岁",
+      "requirements": "测试表单提交"
+    },
+    {
+      "id": "1754463719021",
+      "timestamp": "2025-08-06T07:01:59.021Z",
+      "name": "8.6",
+      "email": "123@11.com",
+      "phone": "13633339999",
+      "consultationType": "student",
+      "ageGroup": "preschool",
+      "requirements": "234545"
+    },
+    {
+      "id": "1754463730432",
+      "timestamp": "2025-08-06T07:02:10.432Z",
+      "name": "8.6",
+      "email": "123@11.com",
+      "phone": "13633339999",
+      "consultationType": "student",
+      "ageGroup": "preschool",
+      "requirements": "234545"
+    }
+  ]
+}
